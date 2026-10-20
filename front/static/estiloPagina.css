@@ -1,0 +1,379 @@
+/* remove margens padrao do navegador */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* tema escuro; a variavel cordestaque vem do servidor (cor do time lider) */
+body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    background: radial-gradient(circle at top, #1b1d26 0%, #0b0c10 60%);
+    color: #e8e8ee;
+    min-height: 100vh;
+}
+
+/* cabecalho minimalista com o nome f1weather */
+.cabecalhoPagina {
+    padding: 18px 28px;
+    border-bottom: 2px solid var(--corDestaque);
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.logoSite {
+    font-size: 28px;
+    font-weight: 900;
+    font-style: italic;
+    letter-spacing: 1px;
+}
+
+.logoSite span {
+    color: var(--corDestaque);
+}
+
+/* tres colunas: pilotos, destaque central e construtores */
+.layoutPrincipal {
+    display: grid;
+    grid-template-columns: 300px 1fr 280px;
+    gap: 22px;
+    padding: 22px;
+    max-width: 1700px;
+    margin: 0 auto;
+}
+
+/* paineis laterais de classificacao */
+.painelClassificacao {
+    background-color: #15161d;
+    border: 1px solid #262833;
+    border-radius: 12px;
+    padding: 14px;
+    align-self: start;
+}
+
+.tituloPainel {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--corDestaque);
+    margin-bottom: 12px;
+}
+
+/* cada linha usa a cor da propria equipe na borda e nos detalhes */
+.linhaClassificacao {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    border-left: 4px solid var(--corEquipe);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--corEquipe) 18%, transparent), transparent 70%);
+}
+
+.numeroPosicao {
+    width: 20px;
+    font-weight: 800;
+    text-align: center;
+    color: #9a9cab;
+}
+
+.fotoPiloto {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: top;
+    background-color: var(--corEquipe);
+    border: 2px solid var(--corEquipe);
+}
+
+.fotoVazia {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #000000;
+}
+
+.caixaLogo {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: 2px solid var(--corEquipe);
+}
+
+.caixaLogo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.textoClassificacao {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.textoClassificacao strong {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.textoClassificacao small {
+    font-size: 11px;
+    color: var(--corEquipe);
+}
+
+.valorPontos {
+    font-weight: 800;
+    font-size: 14px;
+}
+
+/* bloco de destaque da proxima corrida */
+.destaqueCorrida {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 20px;
+    background-color: #15161d;
+    border: 1px solid #262833;
+    border-top: 4px solid var(--corDestaque);
+    border-radius: 14px;
+    padding: 20px;
+}
+
+/* caixa do layout com a bandeira do pais ao fundo */
+.caixaLayout {
+    position: relative;
+    border-radius: 10px;
+    background-size: cover;
+    background-position: center;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* camada clara translucida sobre a bandeira para o desenho do circuito aparecer */
+.sombraBandeira {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.55);
+}
+
+.imagemLayout {
+    position: relative;
+    max-width: 85%;
+    max-height: 300px;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+.etiquetaProxima {
+    display: inline-block;
+    background-color: var(--corDestaque);
+    color: #000000;
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.tituloGrandePremio {
+    font-size: 40px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin: 10px 0 6px;
+}
+
+.nomeCircuito {
+    font-size: 18px;
+    color: var(--corDestaque);
+    margin-bottom: 8px;
+}
+
+.localCorrida,
+.dataCorrida {
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.listaSessoes {
+    list-style: none;
+    margin: 14px 0;
+    border-top: 1px solid #262833;
+}
+
+.listaSessoes li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid #262833;
+    color: #c4c6d2;
+}
+
+.resumoCircuito {
+    font-size: 13px;
+    color: #9a9cab;
+    line-height: 1.5;
+}
+
+/* painel grande do clima com a foto do circuito no fundo */
+.painelClima {
+    margin-top: 22px;
+    border-radius: 14px;
+    background-color: #1b1d26;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+}
+
+/* degrade escuro por cima da foto para o texto ficar legivel */
+.conteudoClima {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 34px;
+    min-height: 300px;
+    background: linear-gradient(120deg, rgba(10, 10, 15, 0.92), rgba(10, 10, 15, 0.55));
+}
+
+.climaAgora,
+.climaCorrida {
+    background-color: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 22px;
+}
+
+.rotuloClima {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--corDestaque);
+}
+
+.temperaturaGrande {
+    font-size: 54px;
+    font-weight: 800;
+    margin: 6px 0;
+}
+
+.linhaIndicadores {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.linhaIndicadores div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(255, 255, 255, 0.06);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.linhaIndicadores small {
+    font-size: 11px;
+    color: #9a9cab;
+}
+
+.barraChuva {
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    margin: 10px 0 14px;
+    overflow: hidden;
+}
+
+.barraChuva div {
+    height: 100%;
+    background-color: #4aa3ff;
+}
+
+.condicaoPista {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+/* cartoes pequenos das proximas etapas */
+.tituloSecao {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--corDestaque);
+    margin: 26px 0 12px;
+}
+
+.gradeCorridas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.cartaoCorrida {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background-color: #15161d;
+    border: 1px solid #262833;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+}
+
+.cartaoCorrida small {
+    color: var(--corDestaque);
+}
+
+.cartaoCorrida strong {
+    font-size: 15px;
+}
+
+.climaCartao {
+    margin-top: 6px;
+    color: #c4c6d2;
+}
+
+.mensagemSemCorridas {
+    background-color: #15161d;
+    padding: 30px;
+    text-align: center;
+    border-radius: 12px;
+}
+
+.rodapePagina {
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    color: #6c6e7c;
+}
+
+/* em telas menores as colunas ficam uma embaixo da outra */
+@media (max-width: 1200px) {
+    .layoutPrincipal {
+        grid-template-columns: 1fr;
+    }
+
+    .areaCentral {
+        order: -1;
+    }
+
+    .destaqueCorrida,
+    .conteudoClima {
+        grid-template-columns: 1fr;
+    }
+}

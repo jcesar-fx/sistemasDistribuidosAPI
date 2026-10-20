@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1Weather</title>
+    <!-- importa o arquivo de estilo css da pasta static -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='estiloPagina.css') }}">
+</head>
+<!-- a cor de destaque vem do servidor e e a cor da equipe do lider do campeonato -->
+<body style="--corDestaque: {{ corDestaque }};">
+
+    <!-- cabecalho minimalista apenas com o nome do site -->
+    <header class="cabecalhoPagina">
+        <h1 class="logoSite">F1<span>Weather</span></h1>
+    </header>
+
+    <div class="layoutPrincipal">
+
+        <!-- coluna da esquerda: campeonato de pilotos -->
+        <aside class="painelClassificacao">
+            <h2 class="tituloPainel">Pilotos</h2>
+            {% for itemPiloto in listaClassificacaoPilotos %}
+                <div class="linhaClassificacao" style="--corEquipe: {{ itemPiloto.corEquipe }};">
+                    <span class="numeroPosicao">{{ itemPiloto.posicao }}</span>
+                    {% if itemPiloto.fotoPiloto %}
+                        <img class="fotoPiloto" src="{{ itemPiloto.fotoPiloto }}" alt="{{ itemPiloto.nomePiloto }}">
+                    {% else %}
+                        <div class="fotoPiloto fotoVazia">{{ itemPiloto.siglaPiloto }}</div>
+                    {% endif %}
+                    <div class="textoClassificacao">
+                        <strong>{{ itemPiloto.nomePiloto }}</strong>
+                        <small>{{ itemPiloto.nomeEquipe }}</small>
+                    </div>
+                    <span class="valorPontos">{{ itemPiloto.pontos }}</span>
+                </div>
+            {% endfor %}
+        </aside>
+
+        <!-- coluna do centro: proxima corrida em destaque -->
+        <main class="areaCentral">
+            {% if proximaCorrida %}
+                <section class="destaqueCorrida">
+                    <!-- layout do circuito em cima da bandeira do pais -->
+                    <div class="caixaLayout" style="background-image: url('{{ proximaCorrida.bandeiraPais }}');">
+                        <div class="sombraBandeira"></div>
+                        {% if proximaCorrida.imagemLayout %}
+                            <img class="imagemLayout" src="{{ proximaCorrida.imagemLayout }}" alt="Layout do circuito">
+                        {% endif %}
+                    </div>
+
+                    <!-- titulo grande e detalhes do circuito -->
+                    <div class="detalhesCorrida">
+                        <span class="etiquetaProxima">Próxima corrida · Etapa {{ proximaCorrida.numeroRodada }} de {{ proximaCorrida.totalEtapas }}</span>
+                        <h2 class="tituloGrandePremio">{{ proximaCorrida.nomeGrandePremio }}</h2>
+                        <p class="nomeCircuito">{{ proximaCorrida.nomeCircuito }}</p>
+                        <p class="localCorrida">📍 {{ proximaCorrida.nomeCidade }}, {{ proximaCorrida.nomePais }}</p>
+                        <p class="dataCorrida">🏁 {{ proximaCorrida.dataCorridaFormatada }} às {{ proximaCorrida.horarioCorrida }}</p>
+
+                        <!-- horarios das sessoes do fim de semana -->
+                        <ul class="listaSessoes">
+                            {% for itemSessao in proximaCorrida.listaSessoes %}
+                                <li><span>{{ itemSessao.nomeSessao }}</span><span>{{ itemSessao.dataSessao }} · {{ itemSessao.horarioSessao }}</span></li>
+                            {% endfor %}
+                        </ul>
+                        <p class="resumoCircuito">{{ proximaCorrida.textoResumo }}</p>
+                    </div>
+                </section>
+
+                <!-- painel grande do clima com a foto do circuito ao fundo -->
+                <section class="painelClima" style="background-image: url('{{ proximaCorrida.fotoCircuito }}');">
+                    <div class="conteudoClima">
+                        <div class="climaAgora">
+                            <span class="rotuloClima">Agora em {{ proximaCorrida.nomeCidade }}</span>
+                            <div class="temperaturaGrande">{{ proximaCorrida.climaAtual.iconeTempo }} {{ proximaCorrida.climaAtual.temperaturaAtual }}°C</div>
+                            <p>{{ proximaCorrida.climaAtual.descricaoTempo }}</p>
+                            <div class="linhaIndicadores">
+                                <div><small>Sensação</small><strong>{{ proximaCorrida.climaAtual.sensacaoTermica }}°C</strong></div>
+                                <div><small>Umidade</small><strong>{{ proximaCorrida.climaAtual.umidadeAr }}%</strong></div>
+                                <div><small>Vento</small><strong>{{ proximaCorrida.climaAtual.velocidadeVento }} km/h</strong></div>
+                            </div>
+                        </div>
+                        <div class="climaCorrida">
+                            <span class="rotuloClima">{{ proximaCorrida.dadosClima.tipoPrevisao }}</span>
+                            <div class="temperaturaGrande">{{ proximaCorrida.dadosClima.iconeTempo }} {{ proximaCorrida.dadosClima.temperaturaMaxima }}° / {{ proximaCorrida.dadosClima.temperaturaMinima }}°</div>
+                            <p>Chance de chuva: <strong>{{ proximaCorrida.dadosClima.probabilidadeChuva }}%</strong></p>
+                            <!-- barra que enche de acordo com a chance de chuva -->
+                            <div class="barraChuva"><div style="width: {{ proximaCorrida.dadosClima.probabilidadeChuva }}%;"></div></div>
+                            <p class="condicaoPista">{{ proximaCorrida.dadosClima.condicaoPista }}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- demais corridas da temporada em cartoes pequenos -->
+                {% if outrasCorridas %}
+                    <h2 class="tituloSecao">Próximas etapas</h2>
+                    <div class="gradeCorridas">
+                        {% for itemCorrida in outrasCorridas %}
+                            <div class="cartaoCorrida">
+                                <small>Etapa {{ itemCorrida.numeroRodada }} · {{ itemCorrida.dataCorridaFormatada }}</small>
+                                <strong>{{ itemCorrida.nomeGrandePremio }}</strong>
+                                <span>{{ itemCorrida.nomeCidade }}, {{ itemCorrida.nomePais }}</span>
+                                <span class="climaCartao">{{ itemCorrida.dadosClima.iconeTempo }} {{ itemCorrida.dadosClima.temperaturaMaxima }}° / {{ itemCorrida.dadosClima.temperaturaMinima }}° · 💧 {{ itemCorrida.dadosClima.probabilidadeChuva }}%</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <!-- mensagem exibida caso a temporada ja tenha acabado -->
+                <div class="mensagemSemCorridas">Nenhuma corrida futura encontrada na temporada atual.</div>
+            {% endif %}
+        </main>
+
+        <!-- coluna da direita: campeonato de construtores -->
+        <aside class="painelClassificacao">
+            <h2 class="tituloPainel">Construtores</h2>
+            {% for itemEquipe in listaClassificacaoConstrutores %}
+                <div class="linhaClassificacao" style="--corEquipe: {{ itemEquipe.corEquipe }};">
+                    <span class="numeroPosicao">{{ itemEquipe.posicao }}</span>
+                    <div class="caixaLogo">
+                        {% if itemEquipe.logoEquipe %}
+                            <img src="{{ itemEquipe.logoEquipe }}" alt="{{ itemEquipe.nomeEquipe }}">
+                        {% endif %}
+                    </div>
+                    <div class="textoClassificacao">
+                        <strong>{{ itemEquipe.nomeEquipe }}</strong>
+                    </div>
+                    <span class="valorPontos">{{ itemEquipe.pontos }}</span>
+                </div>
+            {% endfor %}
+        </aside>
+
+    </div>
+
+    <!-- rodape com os creditos das apis utilizadas -->
+    <footer class="rodapePagina">
+        Dados: Jolpica-F1 · OpenF1 · Open-Meteo · Wikipedia/Wikimedia Commons · flagcdn — Trabalho de Sistemas Distribuídos
+    </footer>
+
+</body>
+</html>

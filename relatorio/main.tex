@@ -1,0 +1,230 @@
+\documentclass[12pt]{article}
+
+\usepackage{sbc-template}
+\usepackage{graphicx,url}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\sloppy
+
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{red!60!black},
+    showstringspaces=false,
+    inputencoding=utf8,
+    extendedchars=true,
+    literate={á}{{\'a}}1 {ã}{{\~a}}1 {â}{{\^a}}1 {à}{{\`a}}1
+             {é}{{\'e}}1 {ê}{{\^e}}1 {í}{{\'i}}1 {ó}{{\'o}}1
+             {õ}{{\~o}}1 {ô}{{\^o}}1 {ú}{{\'u}}1 {ç}{{\c{c}}}1
+             {Á}{{\'A}}1 {Ã}{{\~A}}1 {É}{{\'E}}1 {Í}{{\'I}}1
+             {Ó}{{\'O}}1 {Õ}{{\~O}}1 {Ú}{{\'U}}1 {Ç}{{\c{C}}}1
+}
+
+\title{F1Weather: Sistema Web Cliente para Integração do Calendário da Fórmula 1, Classificação e Previsão Meteorológica via APIs REST}
+
+\author{
+    Júlio César de Oliveira Júnior\inst{1} (Matrícula: 155475) \\
+    Eduardo Reis\inst{1} (Matrícula: 162654) \\
+    Thiago Novinsk\inst{1} (Matrícula: 155476)
+}
+
+\address{Centro de Ciências Computacionais -- Universidade Federal do Rio Grande\\
+Av. Itália, km 8, Prédio C3 - Campus Carreiros - Rio Grande/RS - Brasil
+\email{juliomanolotk@gmail.com, eduardoreis242@gmail.com, thiago@placeholder.com}}
+
+\begin{document}
+
+\maketitle
+
+\begin{resumo}
+  Este relatório apresenta o projeto, a arquitetura e a implementação do sistema web \textbf{F1Weather}, desenvolvido para a disciplina de Sistemas Distribuídos. A aplicação opera no modelo cliente/servidor em Python utilizando o microframework Flask, atuando como cliente HTTP de múltiplos serviços web externos (APIs REST públicas e gratuitas) para consultar o calendário atual da Fórmula 1, as tabelas de classificação de pilotos e construtores, ilustrações livres de direitos autorais e as condições meteorológicas em tempo real de cada autódromo. O documento detalha a motivação de escolha das APIs, as regras de aplicação e cruzamento de dados entre servidores distintos, o pipeline completo de execução a partir da inicialização do servidor (\texttt{python3 main.py}), o tratamento das respostas JSON brutas e a demonstração prática do sistema.
+\end{resumo}
+
+\section{Introdução e Visão Geral do Sistema}
+
+No contexto de Sistemas Distribuídos modernos orientados à Web, aplicações raramente mantêm todas as bases de dados localmente. Em vez disso, sistemas clientes consomem funcionalidades e informações distribuídas em diferentes servidores ao redor do mundo por meio de interfaces de programação de aplicações (\textit{Application Programming Interfaces} -- APIs) baseadas no protocolo HTTP e no estilo arquitetural REST (\textit{Representational State Transfer}).
+
+O projeto \textbf{F1Weather} resolve um problema prático para fãs e analistas de automobilismo: acompanhar o calendário das próximas etapas da temporada atual da Fórmula 1 cruzando automaticamente a localização geográfica de cada circuito com a previsão meteorológica para o fim de semana da corrida — fator crítico que define estratégias de pneus de pista seca (\textit{slick}) ou de chuva (\textit{intermediate/wet}) — além de exibir a classificação atualizada dos campeonatos de pilotos e de construtores.
+
+Arquiteturalmente, o sistema desempenha um papel duplo:
+\begin{enumerate}
+    \item \textbf{Como Cliente de APIs Distribuídas (Backend Python):} Realiza requisições HTTP \texttt{GET} para cinco serviços web independentes, ingere respostas em formato JSON, cruza chaves entre diferentes provedores e realiza o tratamento, formatação e enriquecimento semântico dos dados.
+    \item \textbf{Como Servidor Web de Apresentação (Flask + Jinja2):} Entrega ao navegador do usuário final uma interface gráfica escura (\textit{dark mode}) responsiva, cuja cor de destaque (\textit{accent color}) adapta-se dinamicamente à cor oficial da escuderia que lidera o campeonato de pilotos no momento da consulta.
+\end{enumerate}
+
+\section{APIs Utilizadas, Motivação da Escolha e Regras de Aplicação}
+
+Para garantir que o sistema seja facilmente executável, didático e hospedável em nuvem sem depender de chaves secretas pagas (\textit{API Keys}), limites de cartão de crédito ou cadastros proprietários, foram selecionadas exclusivamente \textbf{APIs públicas abertas e gratuitas}. A Tabela~\ref{tab:apis} resume os cinco serviços integrados no projeto.
+
+\begin{table}[h!]
+\centering
+\caption{Serviços web e APIs REST consumidas pelo sistema F1Weather}
+\label{tab:apis}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{API / Serviço Web} & \textbf{Endpoint Principal Consumido} & \textbf{Dados Extraídos} \\ \midrule
+1. Jolpica-F1 API & \texttt{api.jolpi.ca/ergast/f1/current.json} & Calendário, datas, sessões, \texttt{lat}/\texttt{long} e URL \\
+2. Jolpica-F1 (Standings) & \texttt{.../current/driverStandings.json} & Pontuação de pilotos e de construtores \\
+3. Open-Meteo API & \texttt{api.open-meteo.com/v1/forecast} & Clima atual, máx/mín, vento, umidade e chuva \\
+4. OpenF1 API & \texttt{api.openf1.org/v1/drivers} & Foto oficial do rosto de cada piloto (\texttt{headshot}) \\
+5. Wikipedia REST API & \texttt{en.wikipedia.org/api/rest\_v1/page/...} & Traçado da pista, resumo, foto aérea e logos \\
+6. FlagCDN & \texttt{flagcdn.com/w1280/\{sigla\}.png} & Bandeira em alta definição do país-sede \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Por que escolhemos essas APIs e como elas se conectam?}
+
+A principal qualidade arquitetural do \textbf{F1Weather} está no \textbf{encadeamento de dados entre APIs distintas} (onde a saída tratada de uma API serve como parâmetro de entrada para consultar outra):
+
+\begin{enumerate}
+    \item \textbf{Jolpica-F1 API (Sucessora Oficial da Ergast):} Fornece toda a estrutura oficial da temporada atual da Fórmula 1 em JSON. Para cada corrida, além do nome do Grande Prêmio e dos horários dos treinos livres, classificação e corrida, ela retorna um bloco \texttt{Location} contendo a latitude (\texttt{lat}), a longitude (\texttt{long}) e o país (\texttt{country}), além de um campo \texttt{url} apontando para o artigo da Wikipedia do autódromo. Também utilizamos seus endpoints \texttt{driverStandings.json} e \texttt{constructorStandings.json} para obter a tabela de pontos.
+    \item \textbf{Cruzamento Jolpica-F1 $\rightarrow$ Open-Meteo API:} A API meteorológica Open-Meteo não conhece nomes de autódromos, mas aceita coordenadas geográficas exatas (\texttt{latitude} e \texttt{longitude}) sem exigir chave de acesso. O nosso backend extrai os campos \texttt{lat} e \texttt{long} retornados pela Jolpica-F1 para cada circuito e os injeta diretamente nos parâmetros de consulta da Open-Meteo, obtendo tanto as condições meteorológicas do exato momento (\texttt{current}) quanto a previsão diária de 16 dias (\texttt{daily}).
+    \item \textbf{Cruzamento Jolpica-F1 $\rightarrow$ OpenF1 API:} A Jolpica-F1 fornece a classificação completa dos pilotos e a sigla oficial de 3 letras de cada competidor (campo \texttt{code}, como \texttt{ANT}, \texttt{NOR}, \texttt{VER}), porém não possui fotos dos pilotos. Já a API pública \textbf{OpenF1} (\texttt{?session\_key=latest}) retorna os metadados de transmissão da última sessão oficial da F1, incluindo a sigla (\texttt{name\_acronym}) e a URL da foto oficial recortada do rosto do piloto (\texttt{headshot\_url}). O nosso módulo de classificação constrói um dicionário indexado pela sigla de 3 letras e une os pontos da Jolpica com as fotos da OpenF1.
+    \item \textbf{Cruzamento Jolpica-F1 $\rightarrow$ Wikipedia REST API:} Aproveitando o campo \texttt{url} que a Jolpica entrega para cada circuito e para cada equipe de construtores (ex.: \texttt{Circuit\_of\_the\_Americas}), extraímos o título final do artigo e consultamos dois endpoints da API REST v1 da Wikipedia:
+    \begin{itemize}
+        \item \texttt{/page/summary/\{titulo\}}: retorna o resumo histórico do circuito (\texttt{extract}) e a imagem principal (\texttt{thumbnail.source}), que nas páginas de circuitos corresponde ao diagrama vetorial do traçado da pista e, nas páginas de equipes, ao logotipo da escuderia.
+        \item \texttt{/page/media-list/\{titulo\}}: retorna a lista de arquivos multimídia do Wikimedia Commons (livres de direitos autorais) presentes no artigo. Filtramos o primeiro arquivo fotográfico real (\texttt{.jpg}) em alta resolução para servir de plano de fundo do painel meteorológico.
+    \end{itemize}
+    \item \textbf{Cruzamento Jolpica-F1 $\rightarrow$ FlagCDN:} O nome do país retornado pela API da F1 (ex.: \texttt{USA}, \texttt{Brazil}, \texttt{Monaco}) é convertido por um dicionário de mapeamento ISO de duas letras (\texttt{us}, \texttt{br}, \texttt{mc}) para montar a URL da bandeira no serviço FlagCDN, exibida sob o traçado do circuito.
+\end{enumerate}
+
+\section{Pipeline de Execução do Código (Do \texttt{python3 main.py} ao Navegador)}
+
+Para compreender como o sistema funciona por completo, dividimos o fluxo de execução em duas fases: a fase de inicialização do processo servidor e a fase de atendimento a uma requisição do cliente no navegador.
+
+\subsection{Fase 1: Inicialização do Servidor (\texttt{python3 main.py})}
+
+Quando o comando \texttt{python3 main.py} (ou \texttt{python main.py}) é executado no terminal:
+
+\begin{enumerate}
+    \item O interpretador Python carrega o arquivo raiz \texttt{main.py}.
+    \item O \texttt{main.py} importa a instância \texttt{aplicacaoFlask} definida em \texttt{back/rotasServidor.py}.
+    \item Ao carregar \texttt{back/rotasServidor.py}, o Python importa em cascata os quatro módulos especialistas de integração:
+    \begin{itemize}
+        \item \texttt{apiF1/servicoCalendarioF1.py}
+        \item \texttt{apiClima/servicoPrevisaoTempo.py}
+        \item \texttt{apiClassificacao/servicoClassificacao.py}
+        \item \texttt{apiImagens/servicoImagensWikipedia.py}
+    \end{itemize}
+    \item O objeto \texttt{aplicacaoFlask = Flask(\_\_name\_\_, template\_folder="../front/templates", static\_folder="../front/static")} é instanciado e a rota principal \texttt{@aplicacaoFlask.route("/")} é registrada apontando para a função \texttt{exibirPaginaInicial()}.
+    \item De volta ao \texttt{main.py}, o código lê a variável de ambiente \texttt{PORT} (usando \texttt{5000} como padrão local) e executa \texttt{aplicacaoFlask.run(host="0.0.0.0", port=portaServidor, debug=True)}. Neste instante, o servidor web entra em estado de escuta (\textit{listening}) aguardando conexões HTTP, sem ter disparado nenhuma requisição às APIs externas ainda.
+\end{enumerate}
+
+\subsection{Fase 2: Pipeline de Atendimento à Requisição (\texttt{GET /})}
+
+No momento em que o usuário acessa o endereço do sistema pelo navegador, o Flask invoca a função \texttt{exibirPaginaInicial()} em \texttt{back/rotasServidor.py}, executando o seguinte pipeline sequencial de 7 etapas:
+
+\begin{enumerate}
+    \item \textbf{Ingestão e Filtragem do Calendário F1:} Chama \texttt{buscarProximasCorridas()}, que faz um \texttt{GET} em \texttt{current.json} na Jolpica-F1, compara a data de cada corrida com a data do sistema (\texttt{datetime.now()}) e devolve apenas as corridas futuras já com datas e horários formatados.
+    \item \textbf{Enriquecimento Meteorológico de Todas as Etapas Futuras:} Percorre a lista de corridas futuras em um laço \texttt{for} e, para cada uma, chama \texttt{buscarPrevisaoCircuito(latitude, longitude, dataCorrida)}, anexando o dicionário \texttt{dadosClima} a cada corrida.
+    \item \textbf{Separação da Próxima Corrida em Destaque:} Isola o primeiro elemento da lista (\texttt{proximaCorrida = listaProximasCorridas[0]}) como o evento principal do centro da tela e agrupa as demais em \texttt{outrasCorridas = listaProximasCorridas[1:]}.
+    \item \textbf{Enriquecimento Visual e Clima em Tempo Real da Próxima Corrida:} Exclusivamente para a \texttt{proximaCorrida}, consulta \texttt{buscarResumoWikipedia()} (obtendo o traçado da pista e o resumo textual), \texttt{buscarFotoCircuito()} (obtendo a foto aérea \texttt{.jpg}), \texttt{buscarBandeiraPais()} (obtendo a bandeira do país-sede) e \texttt{buscarClimaAtual()} (obtendo temperatura, sensação térmica, umidade e vento em tempo real no circuito).
+    \item \textbf{Ingestão e Cruzamento das Classificações:} Chama \texttt{buscarClassificacaoPilotos()} (que une o ranking da Jolpica com os \textit{headshots} da OpenF1 e o mapa de cores das equipes) e \texttt{buscarClassificacaoConstrutores()} (que une o ranking de equipes da Jolpica com os logotipos da Wikipedia).
+    \item \textbf{Cálculo Dinâmico da Cor do Tema:} Verifica o primeiro colocado de \texttt{listaClassificacaoPilotos[0]["corEquipe"]} e define a variável \texttt{corDestaque} (por exemplo, \texttt{\#27F4D2} quando a Mercedes lidera).
+    \item \textbf{Renderização do Template HTML:} Chama \texttt{render\_template("paginaInicial.html", ...)}, passando todas as estruturas de dados tratadas para o motor Jinja2 gerar o HTML final enviado ao navegador.
+\end{enumerate}
+
+\section{Explicação Detalhada do Código e Tratamento das Respostas (Obs 1)}
+
+Seguindo rigorosamente a \textbf{Observação 1} do enunciado (\textit{``as respostas obtidas devem ser tratadas... é necessário tratar a informação contida para ser exibida a um possível usuário real''}), nenhuma resposta JSON bruta é repassada ao usuário. Além disso, todo o código foi padronizado em português, utilizando nomenclatura \texttt{camelCase} descritiva e comentários explicativos em todas as seções. A seguir, detalhamos como cada arquivo realiza a chamada, a ingestão e o tratamento dos dados.
+
+\subsection{Módulo 1: \texttt{apiF1/servicoCalendarioF1.py}}
+
+Este arquivo consulta o calendário da temporada atual. Na função \texttt{buscarProximasCorridas()}, a requisição é feita com \texttt{requests.get(urlApiCalendarioF1, timeout=10)}. Após validar \texttt{respostaApiF1.status\_code == 200}, o JSON é convertido por \texttt{.json()} e a lista bruta é acessada pelo caminho hierárquico \texttt{dadosJsonF1["MRData"]["RaceTable"]["Races"]}.
+
+O tratamento aplicado sobre os dados brutos consiste em:
+\begin{itemize}
+    \item \textbf{Filtragem temporal:} Obtém-se a data local com \texttt{datetime.now().strftime("\%Y-\%m-\%d")} e filtra-se apenas \texttt{dataCorridaOriginal >= dataHojeTexto}, descartando corridas já encerradas.
+    \item \textbf{Formatação de data e hora:} As funções auxiliares \texttt{formatarData()} e \texttt{formatarHorario()} quebram a string ISO \texttt{"2026-10-25"} via \texttt{split("-")} para \texttt{"25/10/2026"} e convertem \texttt{"20:00:00Z"} para \texttt{"20:00 UTC"}.
+    \item \textbf{Tradução e montagem das sessões:} O dicionário \texttt{nomesSessoes} traduz as chaves originais da API (\texttt{FirstPractice}, \texttt{SprintQualifying}, \texttt{Qualifying}) para termos amigáveis em português (\textit{Treino Livre 1}, \textit{Classificação Sprint}, \textit{Classificação}), verificando dinamicamente quais sessões existem naquele Grande Prêmio.
+\end{itemize}
+
+\subsection{Módulo 2: \texttt{apiClima/servicoPrevisaoTempo.py}}
+
+Responsável pela comunicação com a API Open-Meteo através de duas funções: \texttt{buscarClimaAtual()} e \texttt{buscarPrevisaoCircuito()}. Ambas enviam um dicionário Python \texttt{parametrosRequisicao} no argumento \texttt{params=} do \texttt{requests.get()}, fazendo com que a biblioteca monte automaticamente a \textit{query string} HTTP (ex.: \texttt{?latitude=30.1328\&longitude=-97.6411\&...}).
+
+O tratamento dos dados meteorológicos brutos realiza quatro transformações essenciais para o usuário final:
+\begin{enumerate}
+    \item \textbf{Decodificação dos códigos WMO (\texttt{weather\_code}):} A Open-Meteo devolve códigos inteiros padronizados pela Organização Meteorológica Mundial (ex.: \texttt{0}, \texttt{3}, \texttt{61}, \texttt{95}). Criamos o dicionário \texttt{descricoesTempo} que converte cada código numérico em uma descrição clara em português acompanhada de um ícone visual (ex.: código \texttt{0} para \textit{``Céu limpo''} e código \texttt{63} para \textit{``Chuva''}).
+    \item \textbf{Arredondamento numérico:} Temperaturas decimais e velocidades de vento (como \texttt{28.4}$^{\circ}$C e \texttt{14.7 km/h}) são arredondadas com \texttt{round()} para leitura imediata no painel.
+    \item \textbf{Seleção inteligente da janela de previsão (16 dias):} Em \texttt{buscarPrevisaoCircuito()}, a API retorna vetores paralelos para os próximos 16 dias (\texttt{time}, \texttt{temperature\_2m\_max}, \texttt{temperature\_2m\_min}, \texttt{precipitation\_probability\_max}). O código verifica se a data da corrida já está dentro do vetor \texttt{time} (\texttt{if dataCorridaOriginal in listaDatasPrevisao:}). Se estiver, localiza o índice exato do domingo da corrida com \texttt{listaDatasPrevisao.index(dataCorridaOriginal)} e exibe \textit{``Previsão para o dia da corrida''}. Caso a etapa ocorra a mais de 16 dias no futuro, seleciona o índice \texttt{0} e informa \textit{``Clima de hoje (corrida a mais de 16 dias)''}.
+    \item \textbf{Inferência da condição de pista e pneus:} A partir da porcentagem de chuva (\texttt{probabilidadeChuva}), o backend aplica uma regra de negócio automobilística:
+    \begin{lstlisting}[language=Python]
+if probabilidadeChuva >= 50:
+    textoCondicaoPista = "Alta chance de chuva (possivel uso de pneus de chuva)"
+elif probabilidadeChuva >= 25:
+    textoCondicaoPista = "Tempo instavel (chance moderada de pista umida)"
+else:
+    textoCondicaoPista = "Tempo firme (provavel corrida em pista seca)"
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{Módulo 3: \texttt{apiImagens/servicoImagensWikipedia.py}}
+
+Para evitar que múltiplas consultas à Wikipedia deixem a navegação lenta após o primeiro acesso, este módulo implementa um \textbf{cache em memória} por meio do dicionário global \texttt{memoriaWikipedia = \{\}}.
+\begin{itemize}
+    \item \textbf{Identificação HTTP (\texttt{User-Agent}):} A API da Wikimedia exige que clientes automatizados enviem um cabeçalho \texttt{User-Agent}. Definimos \texttt{cabecalhoRequisicao = \{"User-Agent": "f1weather-trabalho-sistemas-distribuidos"\}} passado em \texttt{headers=}.
+    \item \textbf{Extração de traçado e resumo (\texttt{buscarResumoWikipedia}):} Extrai o identificador final da URL da Wikipedia com \texttt{urlWikipedia.split("/")[-1]} e consulta \texttt{/api/rest\_v1/page/summary/\{titulo\}}, recolhendo o parágrafo introdutório (\texttt{extract}) e a imagem principal (\texttt{thumbnail["source"]}).
+    \item \textbf{Filtragem de fotografia real (\texttt{buscarFotoCircuito}):} Consulta \texttt{/api/rest\_v1/page/media-list/\{titulo\}} e percorre o array \texttt{items} filtrando exclusivamente imagens cujo título termine com \texttt{.jpg} (\texttt{itemMidia["title"].lower().endswith(".jpg")}), descartando ícones \texttt{.svg} ou logotipos \texttt{.png}, e selecionando a versão de maior resolução em \texttt{srcset[-1]["src"]}.
+\end{itemize}
+
+\subsection{Módulo 4: \texttt{apiClassificacao/servicoClassificacao.py}}
+
+Este módulo constrói os painéis laterais de liderança da temporada:
+\begin{itemize}
+    \item \textbf{Mapa de cores das escuderias (\texttt{coresEquipes}):} Associa o \texttt{constructorId} retornado pela API Jolpica (ex.: \texttt{"mercedes"}, \texttt{"ferrari"}, \texttt{"mclaren"}, \texttt{"red\_bull"}) ao código hexadecimal da cor oficial da equipe.
+    \item \textbf{Junção de APIs em \texttt{buscarClassificacaoPilotos()}:} Primeiro chama \texttt{buscarFotosPilotos()} na API OpenF1 para montar o dicionário \texttt{fotosPorSigla}. Em seguida, percorre o array \texttt{DriverStandings} da Jolpica-F1, concatenando nome e sobrenome (\texttt{givenName + " " + familyName}), pegando a equipe atual do piloto (\texttt{itemPiloto["Constructors"][-1]}), anexando a foto correspondente à sua sigla e atribuindo a cor da sua equipe.
+    \item \textbf{Classificação de equipes em \texttt{buscarClassificacaoConstrutores()}:} Percorre \texttt{ConstructorStandings} na Jolpica-F1 e reutiliza \texttt{buscarResumoWikipedia()} para anexar o logotipo de cada construtor junto aos seus pontos e cor oficial.
+\end{itemize}
+
+\subsection{Integração Backend-Frontend: \texttt{rotasServidor.py}, HTML e CSS Dinâmico}
+
+Quando \texttt{rotasServidor.py} conclui a coleta e o tratamento nos módulos acima, ele entrega os dicionários prontos para \texttt{front/templates/paginaInicial.html}. A inserção dos dados na interface utiliza três recursos principais do Jinja2 combinados com CSS3:
+
+\begin{enumerate}
+    \item \textbf{Tematização dinâmica pelo líder do campeonato:} No elemento \texttt{<body>} do HTML, injetamos a variável CSS \texttt{style="--corDestaque: \{\{ corDestaque \}\};"}. No arquivo \texttt{front/static/estiloPagina.css}, bordas de destaque, títulos de seção e etiquetas utilizam \texttt{var(--corDestaque)}. Assim, a identidade visual inteira do site reflete automaticamente a equipe do líder do campeonato de pilotos.
+    \item \textbf{Acentos de cor por equipe nas tabelas:} Cada linha das listas de pilotos e de construtores recebe \texttt{style="--corEquipe: \{\{ itemPiloto.corEquipe \}\};"}. O CSS aplica essa variável na borda lateral esquerda (\texttt{border-left: 4px solid var(--corEquipe)}) e gera um gradiente translúcido com \texttt{color-mix(in srgb, var(--corEquipe) 18\%, transparent)}.
+    \item \textbf{Barra visual de probabilidade de chuva e fundos dinâmicos:} A bandeira do país e a fotografia aérea do circuito são aplicadas via \texttt{background-image: url(...)}, enquanto a barra de probabilidade de chuva tem sua largura preenchida proporcionalmente ao dado tratado da API: \texttt{style="width: \{\{ proximaCorrida.dadosClima.probabilidadeChuva \}\}\%;"}.
+\end{enumerate}
+
+\section{Instruções de Acesso Online e Exemplos de Demonstração ao Vivo}
+
+\subsection{Execução Local e Hospedagem Online (Requisito: \texttt{localhost = nota zero})}
+
+O código foi preparado no arquivo \texttt{main.py} para ler automaticamente a porta atribuída por servidores de nuvem (\texttt{portaServidor = int(os.environ.get("PORT", 5000))}) e inclui o servidor de produção \texttt{gunicorn} no arquivo \texttt{requirements.txt}.
+\begin{itemize}
+    \item \textbf{Hospedagem em Nuvem (Render.com):} Ao conectar o repositório GitHub ao serviço gratuito Render Web Service, utiliza-se o comando de build \texttt{pip install -r requirements.txt} e o comando de inicialização \texttt{gunicorn main:aplicacaoFlask}, gerando uma URL pública HTTPS acessível de qualquer dispositivo.
+    \item \textbf{Túnel Público Instantâneo (Cloudflare Tunnel / Ngrok):} Durante a apresentação ao vivo, o servidor também pode ser exposto diretamente via túnel reverso HTTPS apontando para a porta \texttt{5000}.
+\end{itemize}
+
+\subsection{Roteiro de Demonstração de Exemplos de Uso ao Vivo}
+
+Durante a apresentação presencial da equipe, a demonstração ao vivo do sistema evidencia os seguintes comportamentos reais em tempo de execução:
+
+\begin{enumerate}
+    \item \textbf{Verificação do Tema Dinâmico e Classificação de Pilotos (Coluna Esquerda):} Ao abrir a página, observa-se na coluna esquerda a liderança do campeonato de pilotos (atualmente com Andrea Kimi Antonelli, da Mercedes, com 340 pontos), acompanhado da foto oficial carregada da API OpenF1. Como o líder pertence à Mercedes, todo o tema escuro do site assume automaticamente os acentos na cor verde-água (\texttt{\#27F4D2}). Abaixo dele, cada piloto exibe a cor oficial de sua respectiva equipe (Ferrari em vermelho \texttt{\#E8002D}, McLaren em laranja \texttt{\#FF8000}, Red Bull em azul \texttt{\#3671C6}).
+    \item \textbf{Análise da Próxima Corrida em Destaque (Coluna Central Superior):} O sistema identifica automaticamente a próxima etapa do calendário a partir da data atual (ex.: \textit{United States Grand Prix -- Etapa 18}, no \textit{Circuit of the Americas} em Austin, EUA). À esquerda do cartão principal, exibe-se o diagrama oficial do traçado de Austin (vindo da Wikipedia) sobreposto à bandeira dos Estados Unidos (vinda da FlagCDN). À direita, são listados os horários convertidos em UTC de todas as sessões do fim de semana (Treinos Livres e Classificação) e o resumo histórico do circuito.
+    \item \textbf{Cruzamento Meteorológico em Tempo Real (Coluna Central Inferior):} Logo abaixo, sobre a fotografia aérea real da torre do circuito de Austin (extraída automaticamente do Wikimedia Commons), o painel meteorológico exibe lado a lado:
+    \begin{itemize}
+        \item \textbf{Clima Agora na Cidade do Circuito:} Temperatura atual, sensação térmica, umidade relativa do ar e velocidade do vento em km/h em Austin.
+        \item \textbf{Previsão para o Dia da Corrida:} Temperaturas máxima e mínima previstas para o domingo do GP, barra visual de probabilidade de chuva e o diagnóstico tratado da condição provável da pista.
+    \end{itemize}
+    \item \textbf{Próximas Etapas e Construtores (Rodapé Central e Coluna Direita):} Na parte inferior central, cartões compactos apresentam a previsão meteorológica para todas as etapas subsequentes da temporada (México, Brasil, Las Vegas, Catar e Abu Dhabi), enquanto a coluna da direita apresenta a tabela do Campeonato de Construtores com os logotipos e pontuações de cada equipe.
+\end{enumerate}
+
+\section{Conclusão}
+
+O desenvolvimento do \textbf{F1Weather} permitiu aplicar na prática os conceitos fundamentais de Sistemas Distribuídos em aplicações web cliente/servidor. A arquitetura modular adotada — isolando cada integração de API em seu próprio pacote Python com responsabilidades claras — demonstrou como múltiplos servidores heterogêneos (Jolpica-F1, Open-Meteo, OpenF1, Wikipedia REST e FlagCDN) podem ser orquestrados, cruzados e tratados no backend para entregar uma experiência rica, visualmente coesa e de fácil compreensão para o usuário final.
+
+\end{document}
